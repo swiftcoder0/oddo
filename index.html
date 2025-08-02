@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack - Community Issue Reporting</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --primary: #2E86AB;
+            --primary-dark: #1a5f7c;
+            --secondary: #F18F01;
+            --secondary-dark: #d67c00;
+            --success: #4CAF50;
+            --warning: #FFC107;
+            --danger: #F44336;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border: #dee2e6;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo i {
+            color: var(--secondary);
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 20px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: var(--transition);
+        }
+
+        nav a:hover, nav a.active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-dark);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid white;
+            color: white;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        @media (min-width: 992px) {
+            .main-content {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+
+        /* Map Section */
+        .map-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            height: 500px;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 250px;
+        }
+
+        .map-controls h3 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        select, .distance-selector {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+        }
+
+        .distance-selector {
+            display: flex;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .distance-option {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            border: none;
+            background: var(--light);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .distance-option.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Issues List */
+        .issues-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header h2 {
+            color: var(--primary);
+        }
+
+        .issues-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .issues-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .issue-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .issue-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .issue-category {
+            position: absolute;
+            top: -10px;
+            right: 15px;
+            background: var(--primary);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .issue-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .status-reported {
+            background: #e3f2fd;
+            color: var(--primary);
+        }
+
+        .status-inprogress {
+            background: #fff8e1;
+            color: #ff9800;
+        }
+
+        .status-resolved {
+            background: #e8f5e9;
+            color: var(--success);
+        }
+
+        .issue-card h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .issue-description {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .issue-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .issue-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 6px;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+        }
+
+        .view-btn {
+            background: var(--light);
+            color: var(--primary);
+        }
+
+        .view-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .report-btn {
+            background: var(--secondary);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Report Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .location-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .map-preview {
+            height: 200px;
+            background: var(--light-gray);
+            border-radius: 4px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+        }
+
+        .photo-upload {
+            border: 2px dashed var(--border);
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .photo-upload:hover {
+            border-color: var(--primary);
+        }
+
+        .photo-upload i {
+            font-size: 2rem;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            background: var(--light);
+            border-radius: 0 0 10px 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Issue Detail Page */
+        .issue-detail {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .detail-header h1 {
+            color: var(--primary);
+        }
+
+        .detail-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 992px) {
+            .detail-content {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .detail-map {
+            height: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .detail-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-top: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid white;
+        }
+
+        .timeline-date {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+
+        .timeline-content {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 30px 0 20px;
+            margin-top: 40px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .footer-column h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: var(--secondary);
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+
+        .footer-links a {
+            color: var(--light-gray);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .footer-links a:hover {
+            color: var(--secondary);
+        }
+
+        .copyright {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--light-gray);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-hands-helping"></i>
+                    <span>CivicTrack</span>
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#" class="active">Dashboard</a></li>
+                        <li><a href="#">Map View</a></li>
+                        <li><a href="#">My Reports</a></li>
+                        <li><a href="#">Community</a></li>
+                    </ul>
+                </nav>
+                <div class="user-actions">
+                    <button class="btn btn-outline"><i class="fas fa-bell"></i></button>
+                    <button class="btn btn-outline"><i class="fas fa-user"></i> John Doe</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Issues List -->
+            <div class="issues-section">
+                <div class="section-header">
+                    <h2>Recent Issues in Your Area</h2>
+                    <div class="filters">
+                        <select>
+                            <option>All Categories</option>
+                            <option>Roads</option>
+                            <option>Lighting</option>
+                            <option>Water Supply</option>
+                            <option>Cleanliness</option>
+                            <option>Public Safety</option>
+                            <option>Obstructions</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="issues-list">
+                    <!-- Issue Card 1 -->
+                    <div class="issue-card">
+                        <div class="issue-category">Roads</div>
+                        <div class="issue-status status-inprogress">In Progress</div>
+                        <h3>Large Pothole on Main Street</h3>
+                        <p class="issue-description">Deep pothole near the intersection causing damage to vehicles. Needs urgent repair.</p>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-user"></i> Anonymous</span>
+                            <span><i class="fas fa-clock"></i> 2 days ago</span>
+                        </div>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-location-dot"></i> 0.8 km</span>
+                            <span><i class="fas fa-comment"></i> 5 updates</span>
+                        </div>
+                        <div class="issue-actions">
+                            <div class="action-btn view-btn">View Details</div>
+                            <div class="action-btn" style="background: #f8d7da; color: #721c24;">Flag</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Issue Card 2 -->
+                    <div class="issue-card">
+                        <div class="issue-category">Cleanliness</div>
+                        <div class="issue-status status-reported">Reported</div>
+                        <h3>Overflowing Trash Bins in Park</h3>
+                        <p class="issue-description">Public bins in Central Park have been overflowing for 3 days, attracting pests.</p>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-user"></i> Sarah Johnson</span>
+                            <span><i class="fas fa-clock"></i> 1 day ago</span>
+                        </div>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-location-dot"></i> 1.2 km</span>
+                            <span><i class="fas fa-comment"></i> 2 updates</span>
+                        </div>
+                        <div class="issue-actions">
+                            <div class="action-btn view-btn">View Details</div>
+                            <div class="action-btn" style="background: #f8d7da; color: #721c24;">Flag</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Issue Card 3 -->
+                    <div class="issue-card">
+                        <div class="issue-category">Public Safety</div>
+                        <div class="issue-status status-resolved">Resolved</div>
+                        <h3>Broken Streetlight on Oak Avenue</h3>
+                        <p class="issue-description">Streetlight not working, making the area very dark at night. Safety concern.</p>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-user"></i> Robert Chen</span>
+                            <span><i class="fas fa-clock"></i> 5 days ago</span>
+                        </div>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-location-dot"></i> 0.5 km</span>
+                            <span><i class="fas fa-comment"></i> 8 updates</span>
+                        </div>
+                        <div class="issue-actions">
+                            <div class="action-btn view-btn">View Details</div>
+                            <div class="action-btn" style="background: #f8d7da; color: #721c24;">Flag</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Issue Card 4 -->
+                    <div class="issue-card">
+                        <div class="issue-category">Water Supply</div>
+                        <div class="issue-status status-inprogress">In Progress</div>
+                        <h3>Water Leak at Elm Street Junction</h3>
+                        <p class="issue-description">Constant water leak near fire hydrant causing water wastage and slippery pavement.</p>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-user"></i> Anonymous</span>
+                            <span><i class="fas fa-clock"></i> 3 days ago</span>
+                        </div>
+                        <div class="issue-meta">
+                            <span><i class="fas fa-location-dot"></i> 2.1 km</span>
+                            <span><i class="fas fa-comment"></i> 3 updates</span>
+                        </div>
+                        <div class="issue-actions">
+                            <div class="action-btn view-btn">View Details</div>
+                            <div class="action-btn" style="background: #f8d7da; color: #721c24;">Flag</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Map Section -->
+            <div class="map-section">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <h3>Map Filters</h3>
+                    <div class="filter-group">
+                        <label>Issue Status</label>
+                        <select>
+                            <option>All Statuses</option>
+                            <option>Reported</option>
+                            <option>In Progress</option>
+                            <option>Resolved</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Issue Category</label>
+                        <select>
+                            <option>All Categories</option>
+                            <option>Roads</option>
+                            <option>Lighting</option>
+                            <option>Water Supply</option>
+                            <option>Cleanliness</option>
+                            <option>Public Safety</option>
+                            <option>Obstructions</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Distance Radius</label>
+                        <div class="distance-selector">
+                            <div class="distance-option">1 km</div>
+                            <div class="distance-option active">3 km</div>
+                            <div class="distance-option">5 km</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Issue Detail Section -->
+        <div class="issue-detail">
+            <div class="detail-header">
+                <h1>Broken Streetlight on Oak Avenue</h1>
+                <div class="issue-status status-resolved">Resolved</div>
+            </div>
+            
+            <div class="detail-content">
+                <div>
+                    <div class="detail-map" id="detailMap"></div>
+                    
+                    <div class="detail-info">
+                        <div class="info-item">
+                            <div class="info-label">Category</div>
+                            <div class="info-value">Public Safety</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Reported By</div>
+                            <div class="info-value">Robert Chen</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Date Reported</div>
+                            <div class="info-value">May 15, 2023</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Date Resolved</div>
+                            <div class="info-value">May 20, 2023</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <p>Streetlight at the corner of Oak Avenue and 5th Street has been out for over a week. The area becomes completely dark after sunset, creating a safety hazard for pedestrians and increasing risk of accidents. Several residents have reported feeling unsafe walking in this area at night.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Photos</label>
+                        <div style="display: flex; gap: 10px; overflow-x: auto; padding: 10px 0;">
+                            <img src="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Broken streetlight" style="width: 120px; height: 120px; object-fit: cover; border-radius: 4px;">
+                            <img src="https://images.unsplash.com/photo-1560512823-829485b8bf24?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" alt="Dark street at night" style="width: 120px; height: 120px; object-fit: cover; border-radius: 4px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3>Resolution Timeline</h3>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-date">May 20, 2023 - 10:30 AM</div>
+                            <div class="timeline-content">
+                                <p><strong>Resolved</strong></p>
+                                <p>Streetlight repaired by city maintenance crew. Tested and functioning properly.</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-date">May 18, 2023 - 2:15 PM</div>
+                            <div class="timeline-content">
+                                <p><strong>Work Started</strong></p>
+                                <p>Technician arrived on site to assess and repair the streetlight.</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-date">May 16, 2023 - 9:00 AM</div>
+                            <div class="timeline-content">
+                                <p><strong>Assigned to Department</strong></p>
+                                <p>Issue assigned to City Electrical Maintenance Department. Scheduled for repair within 3 business days.</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-date">May 15, 2023 - 7:45 PM</div>
+                            <div class="timeline-content">
+                                <p><strong>Issue Reported</strong></p>
+                                <p>Report submitted through CivicTrack by resident Robert Chen.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-top: 30px;">Updates & Comments</h3>
+                    <div class="comment" style="background: var(--light); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <strong>Robert Chen (Reporter)</strong>
+                            <span style="font-size: 0.85rem; color: var(--gray);">May 16, 2023</span>
+                        </div>
+                        <p>Thank you for the quick response. I noticed the maintenance tag was placed on the pole this morning.</p>
+                    </div>
+                    
+                    <div class="comment" style="background: var(--light); padding: 15px; border-radius: 8px; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <strong>City Maintenance</strong>
+                            <span style="font-size: 0.85rem; color: var(--gray);">May 18, 2023</span>
+                        </div>
+                        <p>Our technician has diagnosed the issue as a faulty photocell. Replacement part has been ordered and will be installed within 48 hours.</p>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <textarea placeholder="Add a comment or update..." style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border); min-height: 80px;"></textarea>
+                        <button class="btn btn-primary" style="margin-top: 10px;">Post Comment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Button -->
+    <button class="btn btn-primary report-btn" id="reportBtn">
+        <i class="fas fa-plus"></i> Report an Issue
+    </button>
+    
+    <!-- Report Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report a Civic Issue</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Issue Title</label>
+                    <input type="text" placeholder="Briefly describe the issue">
+                </div>
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <select>
+                        <option disabled selected>Select a category</option>
+                        <option>Roads (potholes, obstructions)</option>
+                        <option>Lighting (broken or flickering lights)</option>
+                        <option>Water Supply (leaks, low pressure)</option>
+                        <option>Cleanliness (overflowing bins, garbage)</option>
+                        <option>Public Safety (open manholes, exposed wiring)</option>
+                        <option>Obstructions (fallen trees, debris)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea placeholder="Provide details about the issue..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Location</label>
+                    <div class="location-options">
+                        <button class="btn btn-primary"><i class="fas fa-location-dot"></i> Use My Current Location</button>
+                        <button class="btn btn-outline" style="color: var(--dark); border-color: var(--border);">Select on Map</button>
+                    </div>
+                    <div class="map-preview">
+                        <i class="fas fa-map-marker-alt"></i> Location will appear here
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Upload Photos (up to 5)</label>
+                    <div class="photo-upload">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop photos here or click to browse</p>
+                        <small>Maximum 5 photos (JPG, PNG)</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="anonymous">
+                        <label for="anonymous">Report anonymously</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background: var(--light-gray);">Cancel</button>
+                <button class="btn btn-primary">Submit Report</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>CivicTrack</h3>
+                    <p style="color: var(--light-gray); margin-bottom: 20px;">Empowering communities to report and resolve local issues together.</p>
+                </div>
+                <div class="footer-column">
+                    <h3>Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Home</a></li>
+                        <li><a href="#">Report an Issue</a></li>
+                        <li><a href="#">View Map</a></li>
+                        <li><a href="#">Community Guidelines</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Resources</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">City Departments</a></li>
+                        <li><a href="#">Emergency Contacts</a></li>
+                        <li><a href="#">Mobile App</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Contact Us</h3>
+                    <ul class="footer-links">
+                        <li><a href="#"><i class="fas fa-envelope"></i> support@civictrack.org</a></li>
+                        <li><a href="#"><i class="fas fa-phone"></i> +1 (555) 123-4567</a></li>
+                        <li><a href="#"><i class="fab fa-twitter"></i> @CivicTrack</a></li>
+                        <li><a href="#"><i class="fab fa-facebook"></i> CivicTrack Community</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                &copy; 2023 CivicTrack. All rights reserved. Making communities better, one report at a time.
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([51.505, -0.09], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Add sample markers
+        const markers = [
+            {lat: 51.505, lng: -0.09, title: "Pothole on Main Street", category: "Roads", status: "inprogress"},
+            {lat: 51.51, lng: -0.1, title: "Overflowing Trash Bins", category: "Cleanliness", status: "reported"},
+            {lat: 51.515, lng: -0.09, title: "Broken Streetlight", category: "Public Safety", status: "resolved"},
+            {lat: 51.52, lng: -0.11, title: "Water Leak", category: "Water Supply", status: "inprogress"}
+        ];
+        
+        // Custom icons
+        const iconColors = {
+            Roads: 'orange',
+            Lighting: 'yellow',
+            'Water Supply': 'blue',
+            Cleanliness: 'green',
+            'Public Safety': 'red',
+            Obstructions: 'purple'
+        };
+        
+        markers.forEach(marker => {
+            const customIcon = L.divIcon({
+                className: 'custom-icon',
+                html: `<div style="background-color: ${iconColors[marker.category]}; 
+                                width: 24px; 
+                                height: 24px; 
+                                border-radius: 50%; 
+                                border: 2px solid white;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-weight: bold;">${marker.category.charAt(0)}</div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            
+            L.marker([marker.lat, marker.lng], {icon: customIcon})
+                .addTo(map)
+                .bindPopup(`<b>${marker.title}</b><br>Category: ${marker.category}<br>Status: ${marker.status}`);
+        });
+        
+        // Initialize detail map
+        const detailMap = L.map('detailMap').setView([51.515, -0.09], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(detailMap);
+        
+        L.marker([51.515, -0.09]).addTo(detailMap)
+            .bindPopup('<b>Broken Streetlight</b><br>Oak Avenue & 5th Street')
+            .openPopup();
+        
+        // Modal functionality
+        const reportBtn = document.getElementById('reportBtn');
+        const reportModal = document.getElementById('reportModal');
+        const closeModal = document.querySelector('.close-modal');
+        
+        reportBtn.addEventListener('click', () => {
+            reportModal.style.display = 'flex';
+        });
+        
+        closeModal.addEventListener('click', () => {
+            reportModal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === reportModal) {
+                reportModal.style.display = 'none';
+            }
+        });
+        
+        // Distance selector
+        const distanceOptions = document.querySelectorAll('.distance-option');
+        distanceOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                distanceOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
